@@ -9,11 +9,11 @@
           <button style="margin-left: 10px" @click="play" v-show="clicked">播放</button>
           <button style="margin-left: 10px" @click="capturePic">截屏</button>
           <button style="margin-left: 10px" @click="del" v-show="clicked">删除</button>
-          <button>{{ currentIndex }}</button>
+          <button style="margin-left: 10px" @click="stopAnimation">停止动画</button>
         </div>
 
         <div v-if="clicked">
-          <span>上个位置到当前选中位置的移动时间：</span>
+          <span>当前选中位置到下个位置的移动时间：</span>
           <input type="number" class="second-input" v-model="clicked.time">
         </div>
       </div>
@@ -64,6 +64,12 @@ const baseSceneData = {
   sceneObject: null,
 };
 
+var allAnimation = []
+
+var singleAnimationPosition = null, singleAnimationTarget = null
+var allAnimationPosition = null, allAnimationTarget = null
+
+
 export default {
   // eslint-disable-next-line vue/multi-word-component-names
   name: "index",
@@ -89,6 +95,24 @@ export default {
     this.init();
   },
   methods: {
+    stopAnimation() {
+      if (singleAnimationPosition) {
+        singleAnimationPosition.kill();
+        singleAnimationPosition = null
+      }
+      if (singleAnimationTarget) {
+        singleAnimationTarget.kill();
+        singleAnimationTarget = null
+      }
+      if (allAnimationPosition) {
+        allAnimationPosition.kill();
+        allAnimationPosition = null
+      }
+      if (allAnimationTarget) {
+        allAnimationTarget.kill();
+        allAnimationTarget = null
+      }
+    },
     setClick(item) {
       if (this.clicked && this.uuid === item.uuid) {
         this.clicked = null
@@ -116,13 +140,19 @@ export default {
       let canvas = renderers.renderer.domElement;
       let image = canvas.toDataURL('image/png');
 
-      this.list.push({
+      let obj = {
         uuid: this.generateUuid(),
         position: JSON.parse(JSON.stringify(current.camera.position)),
         lookAt: JSON.parse(JSON.stringify(current.orbitControls.target)),
         imageURL: image,
-        time: 2,
-      })
+        time: 5,
+      }
+      this.list.push(obj)
+
+      //设置选中
+      this.clicked = obj
+      this.uuid = obj.uuid
+      this.time = obj.time
     },
     init() {
       let data = {...baseSceneData};
@@ -130,7 +160,6 @@ export default {
       this.baseCameraInfo.position = JSON.parse(JSON.stringify(current.camera.position))
       this.baseCameraInfo.lookAt = JSON.parse(JSON.stringify(current.orbitControls.target))
       generateFloor(data);
-      // this.initBox();
       this.animate();
     },
     animate() {
@@ -176,18 +205,18 @@ export default {
       baseLookAt.z = targetLookAt.z
     },
     setCameraPosition(position, lookAt, time) {
-      TweenMax.to(current.camera.position, time, {
+      singleAnimationPosition = TweenMax.to(current.camera.position, time, {
         // delay: 1,// 延迟
         x: position.x,
         y: position.y,
         z: position.z,
-        ease: Power0.easeOut,
+        // ease: Power0.easeOut,
         onStart() {
-          TweenMax.to(current.orbitControls.target, 1.5, {
+          singleAnimationTarget = TweenMax.to(current.orbitControls.target, 1.5, {
             x: lookAt.x,
             y: lookAt.y,
             z: lookAt.z,
-            ease: Sine.easeOut,
+            // ease: Sine.easeOut,
             onUpdate() {
               current.orbitControls.update()
             }
@@ -214,31 +243,53 @@ export default {
       return uuid;
     },
     playAll() {
+      allAnimation = [...this.list]
+
+      //循环完动画, 需要回到初始位置
+      let endAnimation = {
+        uuid: this.generateUuid(),
+        position: JSON.parse(JSON.stringify(this.baseCameraInfo.position)),
+        lookAt: JSON.parse(JSON.stringify(this.baseCameraInfo.lookAt)),
+        time: 5,
+      }
+      allAnimation.push(endAnimation)
+
+      //首先将相机视角设为初始值
+      let position = current.camera.position
+      let target = current.orbitControls.target
+      position.x = this.baseCameraInfo.position.x
+      position.y = this.baseCameraInfo.position.y
+      position.z = this.baseCameraInfo.position.z
+
+      target.x = this.baseCameraInfo.lookAt.x
+      target.y = this.baseCameraInfo.lookAt.y
+      target.z = this.baseCameraInfo.lookAt.z
+
+      console.log(allAnimation, '所有动画')
       this.loopAnimation()
     },
     loopAnimation() {
       // 如果当前索引大于或等于目标数组的长度，则将索引重置为 0
-      if (this.currentIndex > (this.list.length-1)) {
-        return
+      if (this.currentIndex > (allAnimation.length - 1)) {
+        this.currentIndex = 0
       }
 
       // 获取当前要执行动画的目标对象
-      const data = this.list[this.currentIndex];
+      const data = allAnimation[this.currentIndex];
       let _this = this
-      console.log(data,'我是数据。。。。')
-      console.log(this.currentIndex,'我是数据。。。。')
 
-      TweenMax.to(current.camera.position, data.time, {
+      allAnimationPosition = TweenMax.to(current.camera.position, data.time, {
+        // delay: this.currentIndex === 0 ? 1 : 0,// 延迟
         x: data.position.x,
         y: data.position.y,
         z: data.position.z,
-        ease: Power0.easeOut,
+        // ease: Power0.easeOut,
         onStart() {
-          TweenMax.to(current.orbitControls.target, 1.5, {
+          allAnimationTarget = TweenMax.to(current.orbitControls.target, 1.5, {
             x: data.lookAt.x,
             y: data.lookAt.y,
             z: data.lookAt.z,
-            ease: Sine.easeOut,
+            // ease: Sine.easeOut,
             onUpdate() {
               current.orbitControls.update()
             }
