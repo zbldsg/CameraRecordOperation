@@ -2,6 +2,11 @@
   <div class="index">
     <div id="test" class="test"></div>
 
+    <div style="position: absolute;left: 20px;top: 20px">
+      <input type="checkbox" id="myCheckbox" v-model="isChecked" @change="handleChange">
+      <label for="myCheckbox">开启旋转</label>
+    </div>
+
     <div class="around-scene">
       <div style="display: flex;justify-content: space-between;margin: 20px 300px;">
         <div>
@@ -83,6 +88,7 @@ export default {
         lookAt: null,
       },
       currentIndex: 0,
+      isChecked:false,
     }
   },
   created() {
@@ -95,6 +101,10 @@ export default {
     this.init();
   },
   methods: {
+    handleChange() {
+      current.orbitControls.autoRotate = this.isChecked
+      // console.log(this.isChecked,'hhhh')
+    },
     stopAnimation() {
       if (singleAnimationPosition) {
         singleAnimationPosition.kill();
@@ -171,6 +181,8 @@ export default {
     render() {
       renderers.renderer.render(current.scene, current.camera);
       renderers.labelRenderer.render(current.scene, current.camera);
+      // 更新控制器,开启相机旋转需要更新控制器
+     current.orbitControls.update();
     },
     play() {
       let position = current.camera.position

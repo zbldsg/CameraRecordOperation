@@ -24,7 +24,7 @@ function initScene(data) {
 
 function initCamera(data) {
   data.camera = createCamera(0, 15, 15)
-  data.cameraOrtho = createCamera(0, 15, 15)
+  // data.cameraOrtho = createCamera(0, 15, 15)
 }
 
 function initControl(renderers, data) {
